@@ -12,29 +12,28 @@
 #define LED_TYPE      WS2811
 #define COLOR_ORDER   GRB
 #define THRESHOLD     80
+#define DELAY         5
+#define DECAY         255
 
 int leftAudio[7];
 int rightAudio[7];
 int frequency;
 int frequencyRange[7];
 int mid = NUMB_LEDS / 2;
-int wheelPos = 255;
-double decayRatio = BRIGHTNESS / 50;  //bad
 uint8_t hue = 0;                                      //uint8 type because it has a range to 255 and if we increment this variable over 255 it jumps back to 0, usefull for rainbow effect
 int brightness = 100;
-static int counter;
 
-
-CRGB decay = CRGB(decayRatio, decayRatio, decayRatio);
-CRGB blue = CRGB(0, 0, 100);
-CRGB red = CRGB(150, 0, 0);
-CRGB green = CRGB(0, 150, 0);
-CRGB yellow = CRGB(150, 150, 0);
-CRGB black = CRGB(0, 0, 0);
+CRGB blue    =    CRGB(0, 0, 255);
+CRGB red     =    CRGB(255, 0, 0);
+CRGB green   =    CRGB(0, 255, 0);
+CRGB yellow  =    CRGB(255, 255, 0);
+CRGB orange  =    CRGB(255, 128, 0);
+CRGB purple  =    CRGB(255, 0, 255);
+CRGB pink    =    CRGB(255, 0, 127);
+CRGB white   =    CRGB(255, 255, 255);
+CRGB black   =    CRGB(0, 0, 0);
 CRGB leds[NUMB_LEDS];
-CRGB randomColourGenerater;
-static int randomColour = 0;
- 
+
 
 //-----------------------------------------------METHODS-----------------------------------------------//
 
@@ -90,26 +89,21 @@ void frequencyGetterBandLow() {
   frequency = (leftAudio[0] + rightAudio[0] + leftAudio[1] + rightAudio[1])/ 4;
 }
 
-CRGB randomColourChange() {
-  switch (randomColour) {
-    case 0:
-        randomColourGenerater = red;
-        break;
-    case 1:
-        randomColourGenerater = blue;
-        break; 
-    case 2:
-        randomColourGenerater = yellow;
-        break;
-    case 3:
-        randomColourGenerater = green;
-        break;  
-    default:
-        randomColourGenerater = black;
-        break;
-  }
-  return randomColourGenerater;
-}
+static const CRGB RandomColors [10] = 
+{
+  CRGB::Red,
+  CRGB::Blue,
+  CRGB::Green,
+  CRGB::Yellow,
+  CRGB::Orange,
+  CRGB::Purple,
+  CRGB::Pink,
+  CRGB::White,
+  CRGB::SeaGreen,
+  CRGB::PaleVioletRed
+};
+
+
 //-----------------------------------------------VISUALIZER MODES-----------------------------------------------//
 
 void SingleBand0RedBlue() {                                               //1) lowest frequency band, single direction from the start of the led strip, Red and Blue
@@ -120,8 +114,7 @@ void SingleBand0RedBlue() {                                               //1) l
       leds[i] = CRGB(BRIGHTNESS, 0,BRIGHTNESS);
     }
     else
-      leds[i] = leds[i] - decay;
-      //fadeToBlackBy(leds, NUMB_LEDS, 1);     
+      fadeToBlackBy(leds, NUMB_LEDS, DECAY);     
   }
   FastLED.show(); 
 }
@@ -147,22 +140,16 @@ void SingleBand1Piping() {
   frequencyGetterBand1();
   for(int i = NUMB_LEDS - 1; i >= 3; i--) {
     leds[i] = leds[i - 3]; 
-    leds[i-3].fadeToBlackBy(50); 
+    leds[i-3].fadeToBlackBy(DECAY); 
   }
   if(frequency > THRESHOLD) {
+    CRGB newColor = RandomColors[random(0, 10)];
     for(int i = 0; i < 3; i++) {
-      leds[i] = randomColourChange();
+      leds[i] = newColor; 
     }
   }  
-  if(counter == 120) 
-    counter = 0;
   FastLED.show();
-  delay(5);
-  EVERY_N_MILLISECONDS(5) {
-    randomColour ++;
-    if (randomColour > 3);
-      randomColour = 0;
-  }
+  delay(DELAY);
 }
 
 
@@ -221,6 +208,19 @@ void Random() {
 }
 
 
+void Twinkle() {
+  static int counter = 0;
+  counter ++;
+  
+  if(counter == NUMB_LEDS)  {
+    counter = 0;
+    FastLED.clear(false);
+  }
+  leds[random(NUMB_LEDS)] = RandomColors[random(10)];
+  delay(200);
+}
+
+
 
 //-----------------------------------------------SETUP-----------------------------------------------//
 
@@ -252,4 +252,5 @@ void loop() {
  //RainbowReactiveBand0();
  //Random();
  //fadeToBlackTester();
+ //Twinkle();
 }
