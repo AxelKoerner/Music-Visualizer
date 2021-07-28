@@ -1,4 +1,4 @@
-//-----------------------------------------------INITIALIZATION-----------------------------------------------//
+//----------------------------------------------------------------------------------------------INITIALIZATION----------------------------------------------------------------------------------------------//
 
 #include <Arduino.h>
 #include <FastLED.h>                                   //using FastLED libary to handle assembler control of the LEDs 
@@ -8,12 +8,12 @@
 #define DC_Two        A1
 #define LED_PIN       6
 #define NUMB_LEDS     120
-#define BRIGHTNESS    100
+#define BRIGHTNESS    255
 #define LED_TYPE      WS2811
 #define COLOR_ORDER   GRB
-#define THRESHOLD     80
+#define THRESHOLD     100
 #define DELAY         5
-#define DECAY         100
+#define DECAY         170
 #define POWERINMILLIWATTS 300
 
 int leftAudio[7];
@@ -38,7 +38,7 @@ CRGB black   =    CRGB(0, 0, 0);
 CRGB leds[NUMB_LEDS];
 
 
-//-----------------------------------------------METHODS-----------------------------------------------//
+//----------------------------------------------------------------------------------------------METHODS----------------------------------------------------------------------------------------------//
 
 void clearLEDs() {
   for(int i=0; i < NUMB_LEDS; i++) {
@@ -110,7 +110,7 @@ static const CRGB RandomColors [11] =
 };
 
 
-//-----------------------------------------------VISUALIZER MODES-----------------------------------------------//
+//----------------------------------------------------------------------------------------------VISUALIZER MODES----------------------------------------------------------------------------------------------//
 
 void SingleBand0RedBlue() {                                               //1) lowest frequency band, single direction from the start of the led strip, Red and Blue
   readICs();  
@@ -144,13 +144,13 @@ void fadeToBlackTester() {
  const void SingleBand1Piping() {
   readICs();
   frequencyGetterSingleBand(1);
-  for(int i = NUMB_LEDS - 1; i >= 3; i--) {
-    leds[i] = leds[i - 3]; 
-    leds[i-3].fadeToBlackBy(DECAY); 
+  for(int i = NUMB_LEDS - 1; i >= 2; i--) {
+    leds[i] = leds[i - 2]; 
+    leds[i-2].fadeToBlackBy(DECAY); 
   }
   if(frequency > THRESHOLD) {
     CRGB newColor = RandomColors[random(0, 10)];
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 2; i++) {
       leds[i] = newColor; 
     }
   }  
@@ -235,19 +235,100 @@ void Random() {
 
 
 void Twinkle() {
-  static int counter = 0;
-  counter ++;
-  if(counter == NUMB_LEDS)  {
-    counter = 0;
+  static int passCount = 0;
+  passCount++;
+  if (passCount == NUMB_LEDS) {
+    passCount = 0;
     FastLED.clear(false);
   }
   leds[random(NUMB_LEDS)] = RandomColors[random(10)];
-  delay(200);
+  FastLED.show();
+}
+
+// credit to https://github.com/davepl/DavesGarageLEDSeries/blob/master/LED%20Episode%2007/src/comet.h 
+void Comet() {
+  const byte fade = 128;
+  const int cometSize = 5;
+  const int deltaHue = 4;
+
+  static byte hue = HUE_RED;
+  static int direction = 1;
+  static int position = 0;
+
+  hue += deltaHue;
+  position += direction;
+
+  if(position == (NUMB_LEDS - cometSize) || position == 0) {  
+    direction *= -1;
+  }
+
+  for (int i = 0; i < cometSize; i++)
+    leds[position + i].setHue(hue);
+  
+  for(int i = 0; i < NUMB_LEDS; i++) {
+    if(random(2) == 1)
+      leds[i] = leds[i].fadeToBlackBy(fade);
+  }
+  FastLED.show();
+  delay(10);
+  
+}
+
+
+void CometReactive() {
+  const byte fade = 128;
+  const int cometSize = 5;
+  
+  static byte hue = HUE_RED;
+  static int position = 0;
+  hue += 4;
+  position += 1;
+  if(position > 120)  
+    position = 0;
+  readICs();
+  frequencyGetterSingleBand(1);
+
+  for (int i = 0; i < cometSize; i++) {
+    leds[position + i] = leds[i - cometSize];
+  }
+  
+  if(frequency > THRESHOLD) {
+    for(int i = 0; i < cometSize; i++) 
+      leds[i] = leds[i].setHue(hue);
+  }
+  for (int i = 0; i < NUMB_LEDS; i++) {
+    if(random(2) == 1)  
+      leds[i] = leds[i].fadeToBlackBy(fade);
+  }
+  
+  FastLED.show();
+
 }
 
 
 
-//-----------------------------------------------SETUP-----------------------------------------------//
+void tester() {
+  readICs();
+  frequencyGetterSingleBand(1);
+
+  if(frequency > THRESHOLD) {
+    for(int i = 0; i < 5; i++) {
+      leds[i] = RandomColors[i];
+      FastLED.show();
+    }
+  }
+
+  
+  EVERY_N_MILLISECONDS(5) {
+    fadeToBlackBy(leds, NUMB_LEDS, 170);
+  }
+
+
+}
+
+
+
+//----------------------------------------------------------------------------------------------SETUP----------------------------------------------------------------------------------------------//
 
 void setup() {
   pinMode(DC_One, INPUT);                                     //using A0 and A1 as inputs to read out the 7 frequency bands 
@@ -259,7 +340,7 @@ void setup() {
   digitalWrite(STROBE, LOW);                                  //we write Low to the strobe pin so that is doesnt cycle when we start our program
   digitalWrite(RESET, HIGH);                                  //reset pin to high, resets entire multiplexer 
 
-  delay(3000);
+  delay(1000);
   FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, NUMB_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   clearLEDs();
@@ -269,10 +350,9 @@ void setup() {
 }
 
 
-//-----------------------------------------------EVENT LOOP-----------------------------------------------//
+//----------------------------------------------------------------------------------------------EVENT LOOP----------------------------------------------------------------------------------------------//
 
 void loop() {
-
 
  SingleBand1Piping();
  //AllBands();
@@ -282,5 +362,8 @@ void loop() {
  //fadeToBlackTester();
  //Twinkle();
  //AllBandsPiping();
-
+//Comet();
+//CometReactive();
+//tester();
+FastLED.show();
 }
