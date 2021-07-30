@@ -275,35 +275,66 @@ void Comet() {
 }
 
 
-void CometReactive() {
-  const byte fade = 128;
+void CometReactiveChangeDirection() {
+  readICs();
+  frequencyGetterSingleBand(1);
+ const byte fade = 128;
   const int cometSize = 5;
-  
+  const int deltaHue = 4;
+
   static byte hue = HUE_RED;
+  static int direction = 1;
   static int position = 0;
-  hue += 4;
-  position += 1;
-  if(position > 120)  
-    position = 0;
+
+  hue += deltaHue;
+  position += direction;
+
+  if(position == (NUMB_LEDS - cometSize) || position == 0 || frequency > THRESHOLD)  {  
+    direction *= -1;
+  }
+
+  for (int i = 0; i < cometSize; i++)
+    leds[position + i].setHue(hue);
+  
+  for(int i = 0; i < NUMB_LEDS; i++) {
+    if(random(2) == 1)
+      leds[i] = leds[i].fadeToBlackBy(fade);
+  }
+  FastLED.show();
+  delay(10);
+  
+}
+
+
+void FireworkReactive() {
   readICs();
   frequencyGetterSingleBand(1);
 
-  for (int i = 0; i < cometSize; i++) {
-    leds[position + i] = leds[i - cometSize];
-  }
-  
   if(frequency > THRESHOLD) {
-    for(int i = 0; i < cometSize; i++) 
-      leds[i] = leds[i].setHue(hue);
-  }
-  for (int i = 0; i < NUMB_LEDS; i++) {
-    if(random(2) == 1)  
-      leds[i] = leds[i].fadeToBlackBy(fade);
-  }
-  
-  FastLED.show();
 
+    int position = random(NUMB_LEDS);
+    leds[position] = CHSV(hue + (position * 10), 255, brightness);
+    FastLED.show();
+    delay(5);
+    for(int i = position; i < position + 5; i++) {
+      leds[position + i] = CHSV(hue + (i * 10), 255, brightness);
+      leds[position - i] = CHSV(hue + (i * 10), 255, brightness);
+      FastLED.show();
+      delay(5);
+    }
+  }
+  else {
+    fadeToBlackBy(leds, NUMB_LEDS, 5);
+  }
+
+  EVERY_N_MILLISECONDS(5) {
+    
+  }
+ 
+  FastLED.show();
 }
+
+
 
 
 
@@ -354,7 +385,7 @@ void setup() {
 
 void loop() {
 
- SingleBand1Piping();
+ //SingleBand1Piping();
  //AllBands();
  //Rainbow();
  //RainbowReactiveBand0();
@@ -363,7 +394,8 @@ void loop() {
  //Twinkle();
  //AllBandsPiping();
 //Comet();
-//CometReactive();
+//CometReactiveChangeDirection();
 //tester();
-FastLED.show();
+FireworkReactive();
+
 }
