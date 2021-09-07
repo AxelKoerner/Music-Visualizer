@@ -8,11 +8,11 @@
 #define DC_Two        A1
 #define LED_PIN       6
 #define NUMB_LEDS     120
-#define BRIGHTNESS    255
+#define BRIGHTNESS    50
 #define LED_TYPE      WS2811
 #define COLOR_ORDER   GRB
 #define THRESHOLD     100
-#define DELAY         5
+#define DELAY         10
 #define DECAY         170
 #define POWERINMILLIWATTS 300
 
@@ -36,6 +36,7 @@ CRGB pink    =    CRGB(255, 0, 127);
 CRGB white   =    CRGB(255, 255, 255);
 CRGB black   =    CRGB(0, 0, 0);
 CRGB leds[NUMB_LEDS];
+CRGBArray<NUMB_LEDS> ledsSet;
 
 
 //----------------------------------------------------------------------------------------------METHODS----------------------------------------------------------------------------------------------//
@@ -58,25 +59,6 @@ void readICs() {
     rightAudio[i] = analogRead(A1);
     digitalWrite(STROBE, HIGH);
   } 
-}
-
-CRGB Scroll(int pos) {
-  pos = abs(pos);
-  CRGB color (0,0,0);
-  if(pos < 85) {
-    color.g = 0;
-    color.r = ((float)pos / 85.0f) * 255.0f;
-    color.b = 255 - color.r;
-  } else if(pos < 170) {
-    color.g = ((float)(pos - 85) / 85.0f) * 255.0f;
-    color.r = 255 - color.g;
-    color.b = 0;
-  } else if(pos < 256) {
-    color.b = ((float)(pos - 170) / 85.0f) * 255.0f;
-    color.g = 255 - color.b;
-    color.r = 1;
-  }
-  return color;
 }
 
 
@@ -110,7 +92,9 @@ static const CRGB RandomColors [11] =
 };
 
 
-//----------------------------------------------------------------------------------------------VISUALIZER MODES----------------------------------------------------------------------------------------------//
+//##############################################################################################-VISUALIZER MODES-#############################################################################################//
+
+//----------------------------------------------------------------------------------------------REACTIVE MUSIC VISUALIZER----------------------------------------------------------------------------------------------//
 
 void SingleBand0RedBlue() {                                               //1) lowest frequency band, single direction from the start of the led strip, Red and Blue
   readICs();  
@@ -126,22 +110,65 @@ void SingleBand0RedBlue() {                                               //1) l
 }
 
 
-void fadeToBlackTester() {
-  readICs();  
-  frequencyGetterSingleBand(1);                            
-  for(int i = 0; i < NUMB_LEDS; i++) {
-    if (i < (frequency - THRESHOLD)) {
-      leds[i] = yellow;
+void ReactiveBand1() {
+
+  readICs();
+  frequencyGetterSingleBand(1);
+
+  const int cometSize = 5;
+   const int deltaHue = 4;
+  static byte hue = HUE_RED;
+
+  hue += deltaHue;
+
+  for(int i = NUMB_LEDS - 1; i > 0; i--) {
+    leds[i] = leds[i - 1];
+  
+  }
+  if(frequency > THRESHOLD) {
+    for(int i = 0; i < cometSize; i++) {
+    leds[i].setHue(hue);
     }
   }
+  else {
+      leds[0] = black;
+   }
   FastLED.show();
-  EVERY_N_MILLISECONDS(5) {
-      fadeToBlackBy(leds, NUMB_LEDS, 5);
-    }
+  delay(10);
 }
 
+
+void CometChangeDirection() {
+  readICs();
+  frequencyGetterSingleBand(1);
+ const byte fade = 128;
+  const int cometSize = 8;
+  const int deltaHue = 4;
+
+  static byte hue = HUE_RED;
+  static int direction = 1;
+  static int position = 0;
+
+  hue += deltaHue;
+  position += direction;
+
+  if(position == (NUMB_LEDS - cometSize) || position == 0 || frequency > THRESHOLD)  {  
+    direction *= -1;
+  }
+
+  for (int i = 0; i < cometSize; i++)
+    leds[position + i].setHue(hue);
   
- const void SingleBand1Piping() {
+  for(int i = 0; i < NUMB_LEDS; i++) {
+    if(random(2) == 1)
+      leds[i] = leds[i].fadeToBlackBy(fade);
+  }
+  FastLED.show();
+  delay(5);
+}
+
+
+const void SingleBand1Piping() {
   readICs();
   frequencyGetterSingleBand(1);
   for(int i = NUMB_LEDS - 1; i >= 2; i--) {
@@ -157,82 +184,7 @@ void fadeToBlackTester() {
   FastLED.show();
   delay(DELAY);
 }
-
-
-void AllBands() {                                                     // checks all frequency bands and displays them on the leds with different colors when they pass over the threshold
-  readICs();
-  for(int i = 0;i < 7; i++) {
-    frequencyRange[i] = (leftAudio[i] + rightAudio[i]) / 2;
-    if(frequencyRange[i] > THRESHOLD) {
-      leds[i] = CRGB(51, 255, 153);
-    }
-    else 
-      leds[i] = CRGB(0, 0, 0);
-  }
-  FastLED.show();
-}
-
-
-void AllBandsPiping() {
-  readICs();
-  frequencyGetterAllBands();
-  for(int i = NUMB_LEDS - 1; i >= 3; i--) {
-    leds[i] = leds[i - 3]; 
-    leds[i-3].fadeToBlackBy(DECAY); 
-  }
-  for(int i = 0; i < 7; i++) {
-    if(frequencyRange[i] > THRESHOLD) {
-      CRGB newColor = RandomColors[i];
-      leds[0] = newColor;
-      leds[1] = newColor;
-      leds[2] = newColor;
-    } 
-  }
-  FastLED.show();
-  delay(DELAY);
-}
-
-
-void Rainbow() {                                                     // Rainbow on whole led strip, changes color by increasing hue variable
-   for(int i = 0; i < NUMB_LEDS; i++) {
-      leds[i] = CHSV(hue + (i * 10), 255, brightness);
-    }
-  EVERY_N_MILLISECONDS(15) {
-    hue++;
-  }
-  FastLED.show();
-}
-
-
-void RainbowReactiveBand0() {
-  readICs();
-  frequencyGetterSingleBand(1);
-   if(frequency > THRESHOLD) {
-    for(int i = 0; i < NUMB_LEDS; i++) {
-       leds[i] = CHSV(hue + (i * 10), 255, 200);
-       hue++;
-    }
-   }
-   EVERY_N_MILLISECONDS(15) {
-      fadeToBlackBy(leds, NUMB_LEDS, 1);
-      hue++;
-    }
-  FastLED.show();
-}
-
-
-void Random() {
-  EVERY_N_MILLISECONDS(100) {
-     for(int i = 0; i < NUMB_LEDS; i++) {
-      leds[i] = CHSV(hue + (i * 10), random8(), random8(50, 150));
-    }
-    EVERY_N_MILLISECONDS(15) {
-    hue++;
-    }
-  FastLED.show();
-  }
-}
-
+//----------------------------------------------------------------------------------------------NON REACTIVE VISUALIZER----------------------------------------------------------------------------------------------//
 
 void Twinkle() {
   static int passCount = 0;
@@ -272,65 +224,46 @@ void Comet() {
   FastLED.show();
   delay(10);
   
+} 
+
+
+void Random() {
+  EVERY_N_MILLISECONDS(100) {
+     for(int i = 0; i < NUMB_LEDS; i++) {
+      leds[i] = CHSV(hue + (i * 10), random8(), random8(50, 150));
+    }
+    EVERY_N_MILLISECONDS(15) {
+    hue++;
+    }
+  FastLED.show();
+  }
 }
 
 
-void CometReactiveChangeDirection() {
-  readICs();
-  frequencyGetterSingleBand(1);
- const byte fade = 128;
-  const int cometSize = 5;
-  const int deltaHue = 4;
-
-  static byte hue = HUE_RED;
-  static int direction = 1;
-  static int position = 0;
-
-  hue += deltaHue;
-  position += direction;
-
-  if(position == (NUMB_LEDS - cometSize) || position == 0 || frequency > THRESHOLD)  {  
-    direction *= -1;
-  }
-
-  for (int i = 0; i < cometSize; i++)
-    leds[position + i].setHue(hue);
-  
-  for(int i = 0; i < NUMB_LEDS; i++) {
-    if(random(2) == 1)
-      leds[i] = leds[i].fadeToBlackBy(fade);
+void Rainbow() {                                                     // Rainbow on whole led strip, changes color by increasing hue variable
+   for(int i = 0; i < NUMB_LEDS; i++) {
+      leds[i] = CHSV(hue + (i * 10), 255, brightness);
+    }
+  EVERY_N_MILLISECONDS(15) {
+    hue++;
   }
   FastLED.show();
-  delay(10);
-  
 }
 
 
-void FireworkReactive() {
+void RainbowReactiveBand0() {
   readICs();
   frequencyGetterSingleBand(1);
-
-  if(frequency > THRESHOLD) {
-
-    int position = random(NUMB_LEDS);
-    leds[position] = CHSV(hue + (position * 10), 255, brightness);
-    FastLED.show();
-    delay(5);
-    for(int i = position; i < position + 5; i++) {
-      leds[position + i] = CHSV(hue + (i * 10), 255, brightness);
-      leds[position - i] = CHSV(hue + (i * 10), 255, brightness);
-      FastLED.show();
-      delay(5);
+   if(frequency > THRESHOLD) {
+    for(int i = 0; i < NUMB_LEDS; i++) {
+       leds[i] = CHSV(hue + (i * 10), 255, 200);
+       hue++;
     }
-  }
-  else {
-    fadeToBlackBy(leds, NUMB_LEDS, 5);
-  }
-
-  EVERY_N_MILLISECONDS(5) {
-    
-  }
- 
+   }
+   EVERY_N_MILLISECONDS(15) {
+      fadeToBlackBy(leds, NUMB_LEDS, 1);
+      hue++;
+    }
   FastLED.show();
 }
 
@@ -338,24 +271,16 @@ void FireworkReactive() {
 
 
 
-void tester() {
-  readICs();
-  frequencyGetterSingleBand(1);
-
-  if(frequency > THRESHOLD) {
-    for(int i = 0; i < 5; i++) {
-      leds[i] = RandomColors[i];
-      FastLED.show();
-    }
-  }
-
-  
-  EVERY_N_MILLISECONDS(5) {
-    fadeToBlackBy(leds, NUMB_LEDS, 170);
-  }
 
 
-}
+
+
+
+
+
+
+
+
 
 
 
@@ -373,9 +298,9 @@ void setup() {
 
   delay(1000);
   FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, NUMB_LEDS).setCorrection(TypicalLEDStrip);
+  //FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(ledsSet,NUMB_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   clearLEDs();
-  FastLED.setBrightness(BRIGHTNESS);
   FastLED.setMaxPowerInMilliWatts(POWERINMILLIWATTS);
 
 }
@@ -386,16 +311,12 @@ void setup() {
 void loop() {
 
  //SingleBand1Piping();
- //AllBands();
  //Rainbow();
- //RainbowReactiveBand0();
  //Random();
- //fadeToBlackTester();
  //Twinkle();
  //AllBandsPiping();
 //Comet();
-//CometReactiveChangeDirection();
-//tester();
-FireworkReactive();
+CometChangeDirection();
+//ReactiveBand1();
 
 }
