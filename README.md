@@ -4,4 +4,4 @@ A project to visualize music on an led strip. I'm using the SparkFun Spectrum Sh
 
 The project is designed to work with different microchips, led strips. It's possible to run this code with any led strip as long as it has a data pin. 
 Beyond that i added global variables to change certaint hardware requirements. 
-I also added a few effects that dont require a SparkFun Spectrum Shield. They are called not reactive visualizer modes. 
+I also added a few effects that dont require a SparkFun Spectrum Shield. They are referred to as "non reactive visualizer modes" in my code. 
