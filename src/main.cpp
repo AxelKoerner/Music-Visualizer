@@ -72,7 +72,7 @@ void frequencyLowBands() {                          // methode to get the low Ba
   frequency = (leftAudio[0] + rightAudio[0] + leftAudio[1] + rightAudio[1])/ 4;
 }
 
-void frequencyGetterAllBands() {
+void frequencyAllBands() {
   for(int i = 0; i < 7; i++) {
     frequencyRange[i] = (leftAudio[i] + rightAudio[i]) / 2;
   }
@@ -98,7 +98,7 @@ static const CRGB RandomColors [11] =
 
 //----------------------------------------------------------------------------------------------REACTIVE MUSIC VISUALIZER----------------------------------------------------------------------------------------------//
 
-void SingleBand() {                                               // 
+void SingleBand() {                                               // lights up leds based on the frequency level, fades them to black if amplitude isnt reached anymore
   readICs();  
   frequencySingleBand(1);                            
   for(int i = 0; i < NUMB_LEDS; i++) {
@@ -112,7 +112,7 @@ void SingleBand() {                                               //
 }
 
 
-void ReactiveBand1() {
+void ReactiveBand1() {                                          // reacts on band 1, if the frequency is higher than the threshold this mode creates a comet that changes colour 
 
   readICs();
   frequencySingleBand(1);
@@ -157,7 +157,7 @@ void ReactiveBand1() {
 }
 
 
-void CometChangeDirection() {
+void CometChangeDirection() {                                      //comet that changes directions when the frequency is higher than the threshold 
   readICs();
   frequencySingleBand(1);
  const byte fade = 128;
@@ -187,7 +187,7 @@ void CometChangeDirection() {
 }
 
 
-const void SingleBand1Piping() {
+const void SingleBand1Piping() {                                  // different type of methode used to visualize, pipes the leds through the strip when frequency is higher than the threshold                                      
   readICs();
   frequencySingleBand(1);
   for(int i = NUMB_LEDS - 1; i >= 2; i--) {
@@ -205,7 +205,7 @@ const void SingleBand1Piping() {
 }
 
 
-void doubleRainbow() {
+void doubleRainbow() {                                             //splits the strip in two parts and lights up leds based on the frequency level, rainbow colour through adding up to the hue variable
   readICs();
   frequencySingleBand(1);
 
@@ -229,7 +229,7 @@ void doubleRainbow() {
 }
 //----------------------------------------------------------------------------------------------NON REACTIVE VISUALIZER----------------------------------------------------------------------------------------------//
 
-void Twinkle() {
+void Twinkle() {                                                              // lights up random leds on the strip with random colours
   static int passCount = 0;
   passCount++;
   if (passCount == NUMB_LEDS) {
@@ -241,7 +241,7 @@ void Twinkle() {
 }
 
 // credit to https://github.com/davepl/DavesGarageLEDSeries/blob/master/LED%20Episode%2007/src/comet.h 
-void Comet() {
+void Comet() {                                                                // Comet effect, cant be made reactive because the nature of the implementation
   const byte fade = 128;
   const int cometSize = 5;
   const int deltaHue = 4;
@@ -270,7 +270,7 @@ void Comet() {
 } 
 
 
-void Random() {
+void Random() {                                                       // lights up random colours with a different methode to choose the colour
   EVERY_N_MILLISECONDS(100) {
      for(int i = 0; i < NUMB_LEDS; i++) {
       leds[i] = CHSV(hue + (i * 10), random8(), random8(50, 150));
@@ -294,38 +294,20 @@ void Rainbow() {                                                     // Rainbow 
 }
 
 
-void RainbowReactiveBand0() {
-  readICs();
-  frequencySingleBand(1);
-   if(frequency > THRESHOLD) {
-    for(int i = 0; i < NUMB_LEDS; i++) {
-       leds[i] = CHSV(hue + (i * 10), 255, 200);
-       hue++;
-    }
-   }
-   EVERY_N_MILLISECONDS(15) {
-      fadeToBlackBy(leds, NUMB_LEDS, 1);
-      hue++;
-    }
-  FastLED.show();
-}
-
-
-
 //----------------------------------------------------------------------------------------------SETUP----------------------------------------------------------------------------------------------//
 
 void setup() {
-  pinMode(DC_One, INPUT);                                     //using A0 and A1 as inputs to read out the 7 frequency bands 
-  pinMode(DC_Two, INPUT);                                     //from the Sparkfun Spectum Shield. A0 is the DC analog output 
-                                                              //from the first IC for the left audio channel, A1 is the output
-                                                              //for the second IC for the right audio channel
-  pinMode(STROBE, OUTPUT);                                    //pin 4 is the Strobe pin, it cycles through each frequency channel once activated
-  pinMode(RESET, OUTPUT);                                     //pin 5 is the reset pin for out Sparfun Board
-  digitalWrite(STROBE, LOW);                                  //we write Low to the strobe pin so that is doesnt cycle when we start our program
-  digitalWrite(RESET, HIGH);                                  //reset pin to high, resets entire multiplexer 
+  pinMode(DC_One, INPUT);                                                                          //using A0 and A1 as inputs to read out the 7 frequency bands 
+  pinMode(DC_Two, INPUT);                                                                          //from the Sparkfun Spectum Shield. A0 is the DC analog output 
+                                                                                                   //from the first IC for the left audio channel, A1 is the output
+                                                                                                   //for the second IC for the right audio channel
+  pinMode(STROBE, OUTPUT);                                                                         //pin 4 is the Strobe pin, it cycles through each frequency channel once activated
+  pinMode(RESET, OUTPUT);                                                                          //pin 5 is the reset pin for out Sparfun Board
+  digitalWrite(STROBE, LOW);                                                                       //we write Low to the strobe pin so that is doesnt cycle when we start our program
+  digitalWrite(RESET, HIGH);                                                                       //reset pin to high, resets entire multiplexer 
 
   delay(1000);
-  FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, NUMB_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, NUMB_LEDS).setCorrection(TypicalLEDStrip);       //inititalization of the leds, FastLED methode 
   //FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(ledsSet,NUMB_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   clearLEDs();
@@ -336,15 +318,16 @@ void setup() {
 
 //----------------------------------------------------------------------------------------------EVENT LOOP----------------------------------------------------------------------------------------------//
 
-void loop() {                                                 // define methode to run in the endless loop 
+void loop() {                                                 // define methode to run in the event loop 
 
- //SingleBand1Piping();
- //Rainbow();
- //Random();
- //Twinkle();
- //AllBandsPiping();
+//SingleBand1Piping();
+//Rainbow();
+//Random();
+//Twinkle();
+//AllBandsPiping();
 //Comet();
 //CometChangeDirection();
 ReactiveBand1();
 //doubleRainbow();
+
 }
