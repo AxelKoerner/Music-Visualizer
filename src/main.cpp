@@ -13,7 +13,7 @@
 #define BRIGHTNESS    50                                 // brightness of the leds on the strip
 #define LED_TYPE      WS2811                             // led type u connect to the microcontroller
 #define COLOR_ORDER   GRB                                // 
-#define THRESHOLD     100                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
+#define THRESHOLD     80                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
                                                          // for example, low band like 1 often peak at around 100 - 120, high bands only peak at around 50 - 70 
 #define DELAY         10                                 // global delay variable used to delay after a methode has been run through once 
 #define DECAY         170                                // decay variable used to dimm down the leds a certaint amount 
@@ -94,6 +94,8 @@ static const CRGB RandomColors [11] =
 };
 
 
+
+
 //##############################################################################################-VISUALIZER MODES-#############################################################################################//
 
 //----------------------------------------------------------------------------------------------REACTIVE MUSIC VISUALIZER----------------------------------------------------------------------------------------------//
@@ -117,19 +119,16 @@ void ReactiveBand1() {                                          // reacts on ban
   readICs();
   frequencySingleBand(1);
 
-  const int cometSize = 5;
+  const int cometSize = 4;
   const int deltaHue = 4;
   const byte fade = 128;
-  const int cometTail = cometSize / 1.5;
+  const int cometTail = cometSize * 2;
   static byte hue = HUE_RED;
 
   hue += deltaHue;
 
   for(int i = NUMB_LEDS - 1; i > 0; i--) {
     leds[i] = leds[i - 1];
-    if(leds[i] != black) {
-      
-    }
   }
 
   if(frequency > THRESHOLD) {
@@ -140,11 +139,12 @@ void ReactiveBand1() {                                          // reacts on ban
 
     //for(int k = 0; k <= cometTail; k++) {if(random(2) == 1) {leds[k].fadeToBlackBy(fade);}}
    // for(int k = 0; k <= cometTail; k++) {if(random(2) == 1) {leds[k].fadeToBlackBy(fade);}}
+ 
 
     for(int i = cometTail; i >= 0; i--) {
-      if(random(2) == 1)
+      if(random(i+1) == 0)
         leds[i].fadeToBlackBy(fade);
-      if(random(2) == 1)
+      if(random(i+1) == 1)
         leds[i].fadeToBlackBy(fade);
     }
 
@@ -156,6 +156,52 @@ void ReactiveBand1() {                                          // reacts on ban
   delay(10);
 }
 
+void reactiveComet() {
+  readICs();
+  frequencySingleBand(1);
+
+  const int cometSize = 4;
+  const byte fade = 128;
+  static int positions [15];
+  const int steps = 1;
+  static byte hue = HUE_BLUE;
+  static byte deltaHue = 4;
+  const int arrayLength = sizeof(positions)/sizeof(int);
+
+
+  for(int i = 0; i <= arrayLength - 1; i++) {   //checks if positions are out led strip scope 
+    if(positions[i] > NUMB_LEDS - 1)
+      positions[i] = 0;
+  }
+  
+  if(frequency > THRESHOLD) {                     //initiates new positions for comets in array
+    for(int i = 0; i <= arrayLength - 1; i++) {
+      if(positions[i] == 0) {
+         positions[i] = 1;
+        break;
+      }
+       
+    }
+  }
+
+  for(int i = 0; i <= arrayLength - 1; i++) {                                           //draws on led strip
+    if(positions[i] != 0) {
+      for(int j = positions[i] + steps; j >= positions[i]; j--) {
+        leds[j].setHue(hue);
+      }
+      positions[i] += steps;
+    }
+  }
+
+  for(int k = NUMB_LEDS; k >= 0; k--) {
+    if(random(2) == 1)
+      leds[k].fadeToBlackBy(fade);
+  }
+
+  FastLED.show();
+  delay(10);
+  hue += deltaHue;
+}
 
 void CometChangeDirection() {                                      //comet that changes directions when the frequency is higher than the threshold 
   readICs();
@@ -327,7 +373,8 @@ void loop() {                                                 // define methode 
 //AllBandsPiping();
 //Comet();
 //CometChangeDirection();
-ReactiveBand1();
+//ReactiveBand1();
 //doubleRainbow();
+reactiveComet();
 
 }
