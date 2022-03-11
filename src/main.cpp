@@ -156,11 +156,39 @@ void ReactiveBand1() {                                          // reacts on ban
   delay(10);
 }
 
+void sides() {                                        // 4 sides that each represent a frequency band, activate when over the threshold 
+  static const int sides = 4;
+  readICs();
+  for(int i = 0; i <= 3; i++) {
+    frequencySingleBand(i);
+    frequencyRange[i] = frequency;
+  }
+
+  const byte fade = 128;
+  const int sidesNumb = NUMB_LEDS / sides;            //leds per Side
+  const int fade = 5;
+
+  for(int i = 0; i <= 3; i++) {
+    if(frequencyRange[i] > THRESHOLD) {
+      switch(i) {
+        case 0: 
+      }
+    }
+  }
+
+
+
+  FastLED.show();
+  delay(10);
+}
+
+
+
 void reactiveComet() {
   readICs();
   frequencySingleBand(1);
 
-  const int cometSize = 4;
+  //const int cometSize = 4;
   const byte fade = 128;
   static int positions [15];
   const int steps = 1;
@@ -170,25 +198,23 @@ void reactiveComet() {
 
 
   for(int i = 0; i <= arrayLength - 1; i++) {   //checks if positions are out led strip scope 
-    if(positions[i] > NUMB_LEDS - 1)
-      positions[i] = 0;
+    if(positions[i] > NUMB_LEDS - 2)
+      positions[i] = -1;
   }
   
   if(frequency > THRESHOLD) {                     //initiates new positions for comets in array
     for(int i = 0; i <= arrayLength - 1; i++) {
-      if(positions[i] == 0) {
-         positions[i] = 1;
+      if(positions[i] == -1) {
+         positions[i] = 0;
         break;
       }
-       
     }
   }
 
-  for(int i = 0; i <= arrayLength - 1; i++) {                                           //draws on led strip
-    if(positions[i] != 0) {
-      for(int j = positions[i] + steps; j >= positions[i]; j--) {
-        leds[j].setHue(hue);
-      }
+  for(int i = 1; i <= arrayLength - 1; i++) {                                           //draws on led strip
+    if(positions[i] != -1) {
+      leds[positions[i]].setHue(hue);
+      leds[(positions[i] + steps)].setHue(hue);
       positions[i] += steps;
     }
   }
@@ -199,7 +225,7 @@ void reactiveComet() {
   }
 
   FastLED.show();
-  delay(10);
+  delay(5);
   hue += deltaHue;
 }
 
