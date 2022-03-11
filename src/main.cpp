@@ -4,6 +4,8 @@
 
 #include <Arduino.h>
 #include <FastLED.h>                                     // using FastLED libary to handle assembler control of the LEDs 
+#include <IRremote.h>
+
 #define STROBE        4                                  // strobe pin to cycle through the 7 different frequency bands, see https://learn.sparkfun.com/tutorials/spectrum-shield-hookup-guide-v2 for a hookup guide 
 #define RESET         5                                  // reset pin needs to be set to low, enables the strobe pin. reset pin to high, to reset entire multiplexer
 #define DC_One        A0                                 // digital 
@@ -155,6 +157,8 @@ void ReactiveBand1() {                                          // reacts on ban
   FastLED.show();
   delay(10);
 }
+
+
 
 void sides() {                                        // 4 sides that each represent a frequency band, activate when over the threshold 
   static const int sides = 4;
