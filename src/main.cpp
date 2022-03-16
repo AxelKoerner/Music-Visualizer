@@ -15,7 +15,7 @@
 #define BRIGHTNESS    50                                 // brightness of the leds on the strip
 #define LED_TYPE      WS2811                             // led type u connect to the microcontroller
 #define COLOR_ORDER   GRB                                // 
-#define THRESHOLD     80                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
+#define THRESHOLD     100                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
                                                          // for example, low band like 1 often peak at around 100 - 120, high bands only peak at around 50 - 70 
 #define DELAY         10                                 // global delay variable used to delay after a methode has been run through once 
 #define DECAY         170                                // decay variable used to dimm down the leds a certaint amount 
@@ -155,8 +155,12 @@ void ReactiveBand1() {                                          // reacts on ban
       leds[0] = black;
    }
   FastLED.show();
-  delay(10);
+  delay(1);
 }
+
+
+
+
 
 
 
@@ -168,23 +172,59 @@ void sides() {                                        // 4 sides that each repre
     frequencyRange[i] = frequency;
   }
 
-  const byte fade = 128;
-  const int sidesNumb = NUMB_LEDS / sides;            //leds per Side
-  const int fade = 5;
+  const byte fade = 5;
+  const int sidesNumb = (int) NUMB_LEDS / sides;            //leds per Side
+
 
   for(int i = 0; i <= 3; i++) {
     if(frequencyRange[i] > THRESHOLD) {
-      switch(i) {
-        case 0: 
+      switch (i) {
+        case 0: for(int k = 0; k < sidesNumb ; k++ ) {leds[k].red;} break;
+        case 1: for(int k = sidesNumb; k < sidesNumb * 2; k++ ) {leds[k].blue;} break;
+        case 2: for(int k = 0; k < sidesNumb * 3; k++ ) {leds[k].green;} break;
+        case 3: for(int k = 0; k < sidesNumb * 4; k++ ) {leds[k].Yellow;} break;
+
       }
     }
   }
 
-
+  for(int j = NUMB_LEDS - 1; j >= 0; j--) {
+    leds[j].fadeToBlackBy(fade);
+  }
 
   FastLED.show();
   delay(10);
 }
+
+
+
+
+void smootheVisualizer() {
+  
+}
+
+
+
+
+void insertName() {
+  readICs();
+  frequencySingleBand(1);
+
+  double ledFreq = 50/NUMB_LEDS;                 //double value of led per frequency value 
+  static int ledsOn = (int) (frequency * ledFreq);
+  static int fade = 5;
+  for(int i = 0; i <= ledsOn; i++) {
+    leds[i].AliceBlue;
+  }
+
+  for(int i = NUMB_LEDS; i >= 0; i--) {
+    leds->fadeToBlackBy(fade);
+  }
+
+  FastLED.show();
+  delay(10);
+}
+
 
 
 
@@ -403,8 +443,8 @@ void loop() {                                                 // define methode 
 //AllBandsPiping();
 //Comet();
 //CometChangeDirection();
-//ReactiveBand1();
+ReactiveBand1();
 //doubleRainbow();
-reactiveComet();
+//reactiveComet();
 
 }
