@@ -15,11 +15,12 @@
 #define BRIGHTNESS    50                                 // brightness of the leds on the strip
 #define LED_TYPE      WS2811                             // led type u connect to the microcontroller
 #define COLOR_ORDER   GRB                                // 
-#define THRESHOLD     100                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
+#define THRESHOLD     90                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
                                                          // for example, low band like 1 often peak at around 100 - 120, high bands only peak at around 50 - 70 
-#define DELAY         10                                 // global delay variable used to delay after a methode has been run through once 
+#define DELAY         5                                 // global delay variable used to delay after a methode has been run through once 
 #define DECAY         170                                // decay variable used to dimm down the leds a certaint amount 
 #define POWERINMILLIWATTS 300                            // global variable used to prevent the leds from drawing too much power
+#define VISUALIZER_MODE 6
 
 int leftAudio[7];                                        // used to store the frquency of 7 bands of the first IC module 
 int rightAudio[7];                                       // used to store the frquency of 7 bands of the second IC module 
@@ -95,6 +96,32 @@ static const CRGB RandomColors [11] =
   CRGB::PaleVioletRed
 };
 
+CRGB ColorFraction(CRGB colorIn, float fraction) {
+  fraction = min(1.0f, fraction);
+  return CRGB(colorIn).fadeToBlackBy(255 * (1.0f - fraction));
+}
+
+void DrawPixels(float fPos, float count, CRGB color) {
+  float availFirstPixel = 1.0f - (fPos - (long)(fPos));
+  float amtFirstPixel = min(availFirstPixel, count);
+  float remaining = min(count, FastLED.size()-fPos);
+  int iPos = fPos;
+
+  if(remaining > 0.0f) {
+    FastLED.leds()[iPos++] += ColorFraction(color, amtFirstPixel);
+    remaining -= amtFirstPixel;
+  }
+
+  while(remaining > 1.0f) {
+    FastLED.leds()[iPos++] += color;
+    remaining--;
+  }
+
+  if(remaining > 0.0f) {
+    FastLED.leds()[iPos] += ColorFraction(color,remaining);
+  }
+}
+
 
 
 
@@ -104,13 +131,13 @@ static const CRGB RandomColors [11] =
 
 void SingleBand() {                                               // lights up leds based on the frequency level, fades them to black if amplitude isnt reached anymore
   readICs();  
-  frequencySingleBand(1);                            
+  frequencySingleBand(0);                            
   for(int i = 0; i < NUMB_LEDS; i++) {
     if (i < (frequency - THRESHOLD)) {
       leds[i] = CRGB(BRIGHTNESS, 0,BRIGHTNESS);
     }
     else
-      fadeToBlackBy(leds, NUMB_LEDS, DECAY);     
+      fadeToBlackBy(leds, NUMB_LEDS, 1);     
   }
   FastLED.show(); 
 }
@@ -160,7 +187,20 @@ void ReactiveBand1() {                                          // reacts on ban
 
 
 
+void smoothAnim() {
+  static float scroll = 0.0f;
+  scroll += 0.1f;
+  if(scroll > 5.0)
+    scroll -=5.0;
 
+  for(float i = scroll; i < NUMB_LEDS; i+=5) {
+    DrawPixels(i, 3, CRGB::Blue);
+  }
+
+  fadeToBlackBy(leds, NUMB_LEDS, 155);
+  FastLED.show();
+
+}
 
 
 
@@ -179,14 +219,17 @@ void sides() {                                        // 4 sides that each repre
   for(int i = 0; i <= 3; i++) {
     if(frequencyRange[i] > THRESHOLD) {
       switch (i) {
-        case 0: for(int k = 0; k < sidesNumb ; k++ ) {leds[k].red;} break;
-        case 1: for(int k = sidesNumb; k < sidesNumb * 2; k++ ) {leds[k].blue;} break;
-        case 2: for(int k = 0; k < sidesNumb * 3; k++ ) {leds[k].green;} break;
-        case 3: for(int k = 0; k < sidesNumb * 4; k++ ) {leds[k].Yellow;} break;
-
+        case 0: for(int k = 0; k < sidesNumb ; k++ ) {leds[k].setRGB(255,0,0);} break;
+        case 1: for(int k = sidesNumb; k < sidesNumb * 2; k++ ) {leds[k].setRGB(0,0,255);} break;
+        case 2: for(int k = sidesNumb*2; k < sidesNumb * 3; k++ ) {leds[k].setRGB(0,255,0);} break;
+        case 3: for(int k = sidesNumb*3; k < sidesNumb * 4; k++ ) {leds[k].setRGB(255,255,255);} break;
+        default: break;
       }
     }
   }
+
+
+
 
   for(int j = NUMB_LEDS - 1; j >= 0; j--) {
     leds[j].fadeToBlackBy(fade);
@@ -199,30 +242,35 @@ void sides() {                                        // 4 sides that each repre
 
 
 
-void smootheVisualizer() {
-  
-}
 
 
-
-
-void insertName() {
+void ledsOnPerFreq() {
   readICs();
   frequencySingleBand(1);
 
-  double ledFreq = 50/NUMB_LEDS;                 //double value of led per frequency value 
-  static int ledsOn = (int) (frequency * ledFreq);
-  static int fade = 5;
+  // function to map the range of values to the range of leds
+  int ledFreq = NUMB_LEDS/THRESHOLD;
+  int ledsOn = (frequency-THRESHOLD) * ledFreq;
+  static int fade = 20;
+  static byte hue = HUE_BLUE;
+  static byte deltaHue = 4;
+
   for(int i = 0; i <= ledsOn; i++) {
-    leds[i].AliceBlue;
+    leds[i].setHue(hue);
   }
 
-  for(int i = NUMB_LEDS; i >= 0; i--) {
-    leds->fadeToBlackBy(fade);
-  }
+  
 
+  //fadeToBlackBy(leds, NUMB_LEDS, fade);
+  EVERY_N_MILLISECONDS(10) {
+    for(int i = NUMB_LEDS-1; i >= 0; i--) {
+    leds[i].fadeToBlackBy(fade);
+  }
+  }
+  
+  hue += deltaHue;
   FastLED.show();
-  delay(10);
+  delay(5);
 }
 
 
@@ -230,7 +278,7 @@ void insertName() {
 
 void reactiveComet() {
   readICs();
-  frequencySingleBand(1);
+  frequencySingleBand(0);
 
   //const int cometSize = 4;
   const byte fade = 128;
@@ -269,9 +317,10 @@ void reactiveComet() {
   }
 
   FastLED.show();
-  delay(5);
+  delay(DELAY);
   hue += deltaHue;
 }
+
 
 void CometChangeDirection() {                                      //comet that changes directions when the frequency is higher than the threshold 
   readICs();
@@ -299,7 +348,7 @@ void CometChangeDirection() {                                      //comet that 
       leds[i] = leds[i].fadeToBlackBy(fade);
   }
   FastLED.show();
-  delay(5);
+  delay(1);
 }
 
 
@@ -409,6 +458,18 @@ void Rainbow() {                                                     // Rainbow 
   FastLED.show();
 }
 
+void shutterLight() {
+  for(int i = 0; i < NUMB_LEDS; i++) {
+    leds[i].setRGB(255,255,255);
+  }
+  FastLED.show();
+
+  fadeToBlackBy(leds,NUMB_LEDS,255);
+  
+  FastLED.show();
+  delay(50);
+}
+
 
 //----------------------------------------------------------------------------------------------SETUP----------------------------------------------------------------------------------------------//
 
@@ -436,15 +497,62 @@ void setup() {
 
 void loop() {                                                 // define methode to run in the event loop 
 
-//SingleBand1Piping();
-//Rainbow();
-//Random();
-//Twinkle();
-//AllBandsPiping();
-//Comet();
-//CometChangeDirection();
-ReactiveBand1();
-//doubleRainbow();
-//reactiveComet();
+switch (VISUALIZER_MODE) {
+  case 0:
+    shutterLight();
+    break;
+
+  case 1:
+    reactiveComet();
+    break;
+
+  case 2:
+    ledsOnPerFreq();
+    break;
+
+  case 3:
+    smoothAnim();
+    break;
+
+  case 4:
+    SingleBand();   //todo
+    break;
+    
+  case 5:
+    ReactiveBand1();
+    break;  
+
+  case 6:
+    sides();
+    break;
+
+  case 7:
+    CometChangeDirection();
+    break;
+
+  case 8:
+    SingleBand1Piping();
+    break;
+
+  case 9:
+    doubleRainbow();
+    break;
+
+  default:
+    shutterLight();
+}
+
+/*
+shutterLight()
+reactiveComet()
+ledsOnPerFreq()
+smoothAnim()
+SingleBand()
+ReactiveBand1()
+sides()
+CometChangeDirection()
+SingleBand1Piping()
+doubleRainbow()
+*/
 
 }
