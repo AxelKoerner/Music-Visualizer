@@ -512,60 +512,71 @@ void setup() {
 void loop() {                                                 // define methode to run in the event loop 
 
 
-while (!irrrecv.isIdle());  // if not idle, wait till complete
+while (!irrrecv.isIdle());                                    // if not idle, wait till complete
 if(IrReceiver.decode()) {
   
   IR_result = IrReceiver.decodedIRData.decodedRawData;
-  Serial.println(IR_result, HEX);
 
   switch (IR_result) {
-    case 4161273600:          //threshold down
+    case 4161273600:            //threshold down
+      Serial.println("threshold down");
       if(THRESHOLD >= 50) 
         THRESHOLD--;
       break;
 
-    case 3927310080:         //threshhold up
+    case 3927310080:           //threshhold up
+    Serial.println("threshold up");
       if(THRESHOLD <= 130)
         THRESHOLD++;
       break;
 
     case 3910598400:          //shutter light - 0
+      Serial.println("shutter light");
       VISUALIZER_MODE = 0;
       break; 
 
     case 4077715200:         //reactive Comet - 1
+      Serial.println("reactive Comet");
       VISUALIZER_MODE = 1;
       break; 
 
     case 3877175040:         //ledsOnPerFreq - 2
+      Serial.println("leds on per frequency");
       VISUALIZER_MODE = 2;
       break; 
 
     case 2707357440:         //smoothAnim - 3
+      Serial.println("smooth Animation");
       VISUALIZER_MODE = 3;
       break;
 
     case 4144561920:         //SingleBand - 4
+      Serial.println("Single Band");
       VISUALIZER_MODE = 4;
       break;
     
     case 3810328320:         //ReactiveBand1 - 5
+      Serial.println("Reactive Band 1");
       VISUALIZER_MODE = 5;
       break;
     
     case 2774204160:         //Sides - 6
+      Serial.println("Sides");
       VISUALIZER_MODE = 6;
       break;
 
     case 3175284480:         //CometChangeDirection - 7
+      Serial.println("Comet Change Direction");
       VISUALIZER_MODE = 7;
       break;
 
     case 2907897600:         //SingleBand1Piping - 8
+      Serial.println("Single Band 1 Piping");
       VISUALIZER_MODE = 8;
       break;
 
     case 3041591040:         //doubleRainbow - 9
+      Serial.println("Double Rainbow");
       VISUALIZER_MODE = 9;
       break;
 
