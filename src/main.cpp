@@ -11,16 +11,19 @@
 #define DC_One        A0                                 // digital 
 #define DC_Two        A1                                 //
 #define LED_PIN       6                                  // data output pin   
-#define NUMB_LEDS     120                                // number of leds on the led strip
+#define NUMB_LEDS     114                                // number of leds on the led strip
 #define BRIGHTNESS    50                                 // brightness of the leds on the strip
 #define LED_TYPE      WS2811                             // led type u connect to the microcontroller
 #define COLOR_ORDER   GRB                                // 
-#define THRESHOLD     90                                // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
-                                                         // for example, low band like 1 often peak at around 100 - 120, high bands only peak at around 50 - 70 
+#define IR_PIN        8                                  //Pin for data from the IR receiver
 #define DELAY         5                                 // global delay variable used to delay after a methode has been run through once 
 #define DECAY         170                                // decay variable used to dimm down the leds a certaint amount 
 #define POWERINMILLIWATTS 300                            // global variable used to prevent the leds from drawing too much power
-#define VISUALIZER_MODE 6
+
+int VISUALIZER_MODE = 0;
+uint32_t IR_result;
+int THRESHOLD = 90;                                       // used to set a threshold in reactive methods after the function will for example light up leds on the strip, the treshold should be ajusted depending on what band we are reading from
+                                                          // for example, low band like 1 often peak at around 100 - 120, high bands only peak at around 50 - 70 
 
 int leftAudio[7];                                        // used to store the frquency of 7 bands of the first IC module 
 int rightAudio[7];                                       // used to store the frquency of 7 bands of the second IC module 
@@ -29,6 +32,10 @@ int frequencyRange[7];                                   //
 int mid = NUMB_LEDS / 2;
 uint8_t hue = 0;                                        // uint8 type because it has a range to 255 and if we increment this variable over 255 it jumps back to 0, usefull for rainbow effects
 int brightness = 100;
+
+
+IRrecv irrrecv(IR_PIN);                                 //initialize the ir receiver
+decode_results results;
 
 
 CRGB blue    =    CRGB(0, 0, 255);                      // some colours and their pre defined CRB values
@@ -490,12 +497,93 @@ void setup() {
   clearLEDs();
   FastLED.setMaxPowerInMilliWatts(POWERINMILLIWATTS);
 
+
+  Serial.begin(9600);                 //serial communication with 9600 baud
+  irrrecv.enableIRIn();               //activate the IR Pin
+  //pinMode(IR_PIN, INPUT);             //declare IR Pin as input
+  
+  
+
 }
 
 
 //----------------------------------------------------------------------------------------------EVENT LOOP----------------------------------------------------------------------------------------------//
 
 void loop() {                                                 // define methode to run in the event loop 
+
+
+while (!irrrecv.isIdle());  // if not idle, wait till complete
+if(IrReceiver.decode()) {
+  
+  IR_result = IrReceiver.decodedIRData.decodedRawData;
+  Serial.println(IR_result, HEX);
+
+  switch (IR_result) {
+    case 4161273600:          //threshold down
+      if(THRESHOLD >= 50) 
+        THRESHOLD--;
+      break;
+
+    case 3927310080:         //threshhold up
+      if(THRESHOLD <= 130)
+        THRESHOLD++;
+      break;
+
+    case 3910598400:          //shutter light - 0
+      VISUALIZER_MODE = 0;
+      break; 
+
+    case 4077715200:         //reactive Comet - 1
+      VISUALIZER_MODE = 1;
+      break; 
+
+    case 3877175040:         //ledsOnPerFreq - 2
+      VISUALIZER_MODE = 2;
+      break; 
+
+    case 2707357440:         //smoothAnim - 3
+      VISUALIZER_MODE = 3;
+      break;
+
+    case 4144561920:         //SingleBand - 4
+      VISUALIZER_MODE = 4;
+      break;
+    
+    case 3810328320:         //ReactiveBand1 - 5
+      VISUALIZER_MODE = 5;
+      break;
+    
+    case 2774204160:         //Sides - 6
+      VISUALIZER_MODE = 6;
+      break;
+
+    case 3175284480:         //CometChangeDirection - 7
+      VISUALIZER_MODE = 7;
+      break;
+
+    case 2907897600:         //SingleBand1Piping - 8
+      VISUALIZER_MODE = 8;
+      break;
+
+    case 3041591040:         //doubleRainbow - 9
+      VISUALIZER_MODE = 9;
+      break;
+
+    default:
+      break;
+  }
+  irrrecv.resume();
+}
+
+/* von top left to bottom rigth all hex values from the ir remote 
+  BA45FF00 B946FF00 B847FF00
+  BB44FF00 BF40FF00 BC43FF00
+  F807FF00 EA15FF00 F609FF00
+  E916FF00 E619FF00 F20DFF00
+  F30CFF00 E718FF00 A15EFF00
+  F708FF00 E31CFF00 A55AFF00
+  BD42FF00 AD52FF00 B54AFF00
+*/ 
 
 switch (VISUALIZER_MODE) {
   case 0:
